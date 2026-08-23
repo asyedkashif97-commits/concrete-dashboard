@@ -73,6 +73,10 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         inputs=[temp_slider, days_slider],
         outputs=[strength_output, status_output],
     )
-
 if __name__ == "__main__":
-    demo.launch()
+    import os
+    port = int(os.environ.get("PORT", 7860))
+    demo.launch(server_name="0.0.0.0", server_port=port)
+
+
+
