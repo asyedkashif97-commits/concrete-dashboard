@@ -1,14 +1,13 @@
 import os
 import joblib
 import numpy as np
-import pandas as pd
 import xgboost as xgb
 import gradio as gr
 
 MODEL_PATH = "concrete_model.pkl"
 
 # =========================================================================
-# CENTRAL DATABASE FOR MULTIPLE CONCRETE CUBES (SIMULATED TELEMETRY)
+# CENTRAL DATABASE FOR MULTIPLE CONCRETE CUBES
 # =========================================================================
 CUBE_DATABASE = {
     "Cube 01 (Foundation Column A1)": {
@@ -54,19 +53,33 @@ def update_cube_dashboard(selected_cube):
     curing_days = cube_data["curing_days"]
     temp = cube_data["base_temp"]
     
-    # 1. Nurse-Saul Maturity Estimation: Index = Sum of (Temp - Datum_Temp) * Hours
-    # Assuming continuous average curing temperature baseline over tracking lifecycle
+    # 1. Nurse-Saul Maturity Estimation
     datum_temp = -10.0
-       # 5. Build Data Table for Curing Profile Progress Visualization Graph
-    time_points = np.linspace(0, total_hours, 20)
-    temp_curve = temp + (10 * np.sin(time_points / 12)) + np.random.uniform(-0.5, 0.5, size=20)
+    total_hours = curing_days * 24
+    calculated_maturity = (temp - datum_temp) * total_hours
     
-    graph_df = pd.DataFrame({
-        "Hours": time_points,
-        "Temperature": temp_curve
-    })
+    # 2. Safety Check for Machine Learning Model Execution
+    if not os.path.exists(MODEL_PATH):
+        return (
+            cube_data["mix"], cube_data["timestamp"], f"{temp:.1f} °C",
+            f"{calculated_maturity:.0f} °C-hours", "Error: Missing model file", 
+            "❌ Please place concrete_model.pkl in repository.", cube_data["utm_strength"], "N/A"
+        )
     
-    # Calculate difference between AI and real physical hydraulic lab machine test values
+    # 3. Compute Strength Prediction using pre-trained XGBoost
+    model = joblib.load(MODEL_PATH)
+    features = np.array([[temp, curing_days]])
+    predicted_strength = float(model.predict(features))
+    
+    # 4. Determine Engineering Advisory Alert Flags
+    if predicted_strength < 20.0:
+        status = "❌ Status: Critical Low Strength. Do NOT remove structural formwork framing panels!"
+    elif predicted_strength < 35.0:
+        status = "⚠️ Status: Moderate Curing. Structurally sound for early/minor handling profiles."
+    else:
+        status = "✅ Status: Targeted Capacity Met. Safe to safely strip forms and apply complete loads."
+    
+    # 5. Calculate difference between AI and real physical lab UTM values
     real_utm = cube_data["utm_strength"]
     if "MPa" in real_utm:
         real_num = float(real_utm.replace(" MPa", ""))
@@ -82,15 +95,14 @@ def update_cube_dashboard(selected_cube):
         f"{predicted_strength:.2f} MPa", 
         status, 
         real_utm,
-        error_val,
-        graph_df
+        error_val
     )
 
 # =========================================================================
 # GRADIO INTERACTIVE INTERFACE LAYOUT DESIGN WITH UNIVERSITY BRANDING
 # =========================================================================
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
-    # 🏛️ High-Level University and Department Branding Headers
+    # 🏛️ University Headers
     gr.Markdown(
         """
         <div style="text-align: center; margin-bottom: 20px;">
@@ -110,10 +122,9 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🚧 Multi-Cube Real-Time Concrete Maturity & Strength Tracker")
     gr.Markdown("Select individual structural concrete sample units below to display distinct wireless IoT data profiles.")
 
-    # Dropdown Menu to switch between individual concrete samples
     cube_selector = gr.Dropdown(
         choices=list(CUBE_DATABASE.keys()),
-        value=list(CUBE_DATABASE.keys())[0],
+        value=list(CUBE_DATABASE.keys()[0]),
         label="🔍 Select Concrete Specimen Core to Inspect"
     )
     
@@ -136,29 +147,17 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             utm_out = gr.Textbox(label="Universal Testing Machine (UTM) Physical Crushing Result")
             error_out = gr.Textbox(label="Model Prediction Variance / Margin of Error")
 
-    gr.Markdown("### 📈 Live Time-Temperature Maturity Curve Trend (15-Minute Sensor Intervals)")
-    temp_graph = gr.LinePlot(
-        x="Hours",
-        y="Temperature",
-        x_title="Curing Duration (Hours elapsed)",
-        y_title="Internal Telemetry Temperature (°C)",
-        title="Concrete Internal Temperature Log Curve",
-        width=900,
-        height=300
-    )
-
-    # Link the selector switch event to update everything on the page dynamically
+    # Link the tracking parameters
     cube_selector.change(
         fn=update_cube_dashboard,
         inputs=[cube_selector],
-        outputs=[mix_out, time_out, temp_out, maturity_out, strength_out, status_out, utm_out, error_out, temp_graph]
+        outputs=[mix_out, time_out, temp_out, maturity_out, strength_out, status_out, utm_out, error_out]
     )
     
-    # Trigger initial data load when page boots up
     demo.load(
         fn=update_cube_dashboard,
         inputs=[cube_selector],
-        outputs=[mix_out, time_out, temp_out, maturity_out, strength_out, status_out, utm_out, error_out, temp_graph]
+        outputs=[mix_out, time_out, temp_out, maturity_out, strength_out, status_out, utm_out, error_out]
     )
 
 if __name__ == "__main__":
