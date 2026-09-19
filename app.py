@@ -7,38 +7,38 @@ import gradio as gr
 MODEL_PATH = "concrete_model.pkl"
 
 # =========================================================================
-# CENTRAL DATABASE FOR MULTIPLE CONCRETE CUBES
+# SIMULATED TELEMETRY FOR CUBES 01 TO 05 ONLY
 # =========================================================================
 CUBE_DATABASE = {
-    "Cube 01 (Foundation Column A1)": {
+    "Cube 01": {
         "mix": "M20 Grade",
         "curing_days": 3,
         "base_temp": 42.5,
         "utm_strength": "19.50 MPa",
         "timestamp": "Sept 16, 2026 - 09:00 AM"
     },
-    "Cube 02 (Roof Slab Beam B4)": {
+    "Cube 02": {
         "mix": "M20 Grade",
         "curing_days": 7,
         "base_temp": 31.2,
         "utm_strength": "29.10 MPa",
         "timestamp": "Sept 12, 2026 - 11:30 AM"
     },
-    "Cube 03 (Ground Retaining Wall)": {
+    "Cube 03": {
         "mix": "M25 High Strength",
         "curing_days": 14,
         "base_temp": 24.8,
         "utm_strength": "Pending Test (Day 28)",
         "timestamp": "Sept 05, 2026 - 08:15 AM"
     },
-    "Cube 04 (Bridge Pier Base C)": {
+    "Cube 04": {
         "mix": "M30 Special Mix",
         "curing_days": 28,
         "base_temp": 22.1,
         "utm_strength": "42.30 MPa",
         "timestamp": "Aug 22, 2026 - 07:00 AM"
     },
-    "Cube 05 (Lab Control Sample)": {
+    "Cube 05": {
         "mix": "M20 Grade",
         "curing_days": 1,
         "base_temp": 48.9,
@@ -106,13 +106,13 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown(
         """
         <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #0A3663; margin-bottom: 5px; font-size: 28px; font-weight: bold;">
+            <h1 style="color: #0A3663; margin-bottom: 5px; font-size: 26px; font-weight: bold;">
                 MEHRAN UNIVERSITY OF ENGINEERING AND TECHNOLOGY
             </h1>
-            <h2 style="color: #4A5568; margin-top: 0px; margin-bottom: 5px; font-size: 20px; font-weight: 500;">
+            <h2 style="color: #4A5568; margin-top: 0px; margin-bottom: 5px; font-size: 18px; font-weight: 500;">
                 SZAB CAMPUS KHAIRPUR MIRS
             </h2>
-            <h3 style="color: #718096; margin-top: 0px; margin-bottom: 25px; font-size: 16px; font-weight: bold; border-bottom: 2px solid #E2E8F0; padding-bottom: 15px;">
+            <h3 style="color: #718096; margin-top: 0px; margin-bottom: 25px; font-size: 15px; font-weight: bold; border-bottom: 2px solid #E2E8F0; padding-bottom: 15px;">
                 DEPARTMENT OF CIVIL ENGINEERING
             </h3>
         </div>
@@ -124,7 +124,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
     cube_selector = gr.Dropdown(
         choices=list(CUBE_DATABASE.keys()),
-        value=list(CUBE_DATABASE.keys()),
+        value=list(CUBE_DATABASE.keys())[0],
         label="🔍 Select Concrete Specimen Core to Inspect"
     )
     
@@ -147,7 +147,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             utm_out = gr.Textbox(label="Universal Testing Machine (UTM) Physical Crushing Result")
             error_out = gr.Textbox(label="Model Prediction Variance / Margin of Error")
 
-    # Link the tracking parameters
+    # Link the data matching loops cleanly (Perfect 8-item array matching)
     cube_selector.change(
         fn=update_cube_dashboard,
         inputs=[cube_selector],
