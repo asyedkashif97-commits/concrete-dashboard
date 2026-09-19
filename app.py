@@ -124,7 +124,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
     cube_selector = gr.Dropdown(
         choices=list(CUBE_DATABASE.keys()),
-        value=list(CUBE_DATABASE.keys()[0]),
+        value=list(CUBE_DATABASE.keys()),
         label="🔍 Select Concrete Specimen Core to Inspect"
     )
     
