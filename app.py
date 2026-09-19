@@ -7,7 +7,7 @@ import gradio as gr
 MODEL_PATH = "concrete_model.pkl"
 
 # =========================================================================
-# SIMULATED TELEMETRY FOR CUBES 01 TO 05 ONLY (SIMPLIFIED REWRITE)
+# SIMULATED TELEMETRY FOR CUBES 01 TO 05 ONLY
 # =========================================================================
 CUBE_DATABASE = {
     "Cube 01": {
@@ -48,38 +48,32 @@ CUBE_DATABASE = {
 }
 
 def update_cube_dashboard(selected_cube):
-    """Processes individual cube data and matches perfectly with Gradio text fields."""
     cube_data = CUBE_DATABASE[selected_cube]
     curing_days = cube_data["curing_days"]
     temp = cube_data["base_temp"]
     
-    # 1. Nurse-Saul Maturity Calculation
     datum_temp = -10.0
     total_hours = curing_days * 24
     calculated_maturity = (temp - datum_temp) * total_hours
     
-    # 2. Safety Check for Model File
     if not os.path.exists(MODEL_PATH):
         return (
             cube_data["mix"], cube_data["timestamp"], f"{temp:.1f} °C",
-            f"{calculated_maturity:.0f} °C-hours", "Error", "Missing model.pkl",
+            f"{calculated_maturity:.0f} °C-hours", "Error", "Missing model file", 
             cube_data["utm_strength"], "N/A"
         )
     
-    # 3. XGBoost Predictive Calculation
     model = joblib.load(MODEL_PATH)
     features = np.array([[temp, curing_days]])
     predicted_strength = float(model.predict(features))
     
-    # 4. Status Evaluation Flags
     if predicted_strength < 20.0:
-        status = "❌ Status: Critical Low Strength. Do NOT remove structural formwork panels!"
+        status = "❌ Status: Critical Low Strength. Do NOT remove formwork!"
     elif predicted_strength < 35.0:
-        status = "⚠️ Status: Moderate Curing. Structurally sound for early/minor handling profiles."
+        status = "⚠️ Status: Moderate Curing. Structurally sound for early handling."
     else:
-        status = "✅ Status: Targeted Capacity Met. Safe to safely strip forms and apply complete loads."
+        status = "✅ Status: Targeted Capacity Met. Safe to strip forms completely."
     
-    # 5. Model vs Physical Verification Variance Calculation
     real_utm = cube_data["utm_strength"]
     if "MPa" in real_utm:
         real_num = float(real_utm.replace(" MPa", ""))
@@ -98,11 +92,7 @@ def update_cube_dashboard(selected_cube):
         error_val
     )
 
-# =========================================================================
-# GRADIO SYSTEM INTERFACE LAYOUT (MATCHED 8-INPUT ARRAY PROPERTIES)
-# =========================================================================
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
-    # Institutional Headers
     gr.Markdown(
         """
         <div style="text-align: center; margin-bottom: 20px;">
@@ -124,7 +114,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
     cube_selector = gr.Dropdown(
         choices=list(CUBE_DATABASE.keys()),
-        value=list(CUBE_DATABASE.keys())[0],
+        value="Cube 01",
         label="🔍 Select Concrete Specimen Core to Inspect"
     )
     
@@ -147,7 +137,6 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             utm_out = gr.Textbox(label="Universal Testing Machine (UTM) Physical Crushing Result")
             error_out = gr.Textbox(label="Model Prediction Variance / Margin of Error")
 
-    # Linked function mappings (Exactly 8 outputs connect to 8 text boxes perfectly)
     cube_selector.change(
         fn=update_cube_dashboard,
         inputs=[cube_selector],
