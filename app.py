@@ -57,38 +57,13 @@ def update_cube_dashboard(selected_cube):
     # 1. Nurse-Saul Maturity Estimation: Index = Sum of (Temp - Datum_Temp) * Hours
     # Assuming continuous average curing temperature baseline over tracking lifecycle
     datum_temp = -10.0
-    total_hours = curing_days * 24
-    calculated_maturity = (temp - datum_temp) * total_hours
-    
-    # 2. Safety Check for Machine Learning Model Execution
-    if not os.path.exists(MODEL_PATH):
-        return (
-            cube_data["mix"], cube_data["timestamp"], f"{temp:.1f} °C",
-            f"{calculated_maturity:.0f} °C-hours", "Error: Missing model file", 
-            "❌ Please place concrete_model.pkl in repository.", cube_data["utm_strength"], "N/A"
-        )
-    
-    # 3. Compute Strength Prediction using the pre-trained XGBoost algorithm
-    model = joblib.load(MODEL_PATH)
-    features = np.array([[temp, curing_days]])
-    predicted_strength = float(model.predict(features)[0])
-    
-    # 4. Determine Engineering Advisory Alert Flags
-    if predicted_strength < 20.0:
-        status = "❌ Status: Critical Low Strength. Do NOT remove structural formwork framing panels!"
-    elif predicted_strength < 35.0:
-        status = "⚠️ Status: Moderate Curing. Structurally sound for early/minor handling profiles."
-    else:
-        status = "✅ Status: Targeted Capacity Met. Safe to safely strip forms and apply complete loads."
-        
-    # 5. Build Data Table for Curing Profile Progress Visualization Graph
-    # Simulates continuous 15-minute sensor intervals trending up to current point
+       # 5. Build Data Table for Curing Profile Progress Visualization Graph
     time_points = np.linspace(0, total_hours, 20)
     temp_curve = temp + (10 * np.sin(time_points / 12)) + np.random.uniform(-0.5, 0.5, size=20)
     
     graph_df = pd.DataFrame({
-        "Curing Duration (Hours elapsed)": time_points,
-        "Internal Telemetry Temperature (°C)": temp_curve
+        "Hours": time_points,
+        "Temperature": temp_curve
     })
     
     # Calculate difference between AI and real physical hydraulic lab machine test values
@@ -163,8 +138,10 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
     gr.Markdown("### 📈 Live Time-Temperature Maturity Curve Trend (15-Minute Sensor Intervals)")
     temp_graph = gr.LinePlot(
-        x="Curing Duration (Hours elapsed)",
-        y="Internal Telemetry Temperature (°C)",
+        x="Hours",
+        y="Temperature",
+        x_title="Curing Duration (Hours elapsed)",
+        y_title="Internal Telemetry Temperature (°C)",
         title="Concrete Internal Temperature Log Curve",
         width=900,
         height=300
