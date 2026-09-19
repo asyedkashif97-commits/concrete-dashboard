@@ -7,73 +7,83 @@ import gradio as gr
 MODEL_PATH = "concrete_model.pkl"
 
 # =========================================================================
-# SIMULATED TELEMETRY FOR CUBES 01 TO 05 ONLY
+# CENTRAL DATABASE FOR CUBES 01 TO 05 ONLY (ERROR-FREE DICTIONARY FORMAT)
 # =========================================================================
 CUBE_DATABASE = {
     "Cube 01": {
         "mix": "M20 Grade",
         "curing_days": 3,
-        "base_temp": 42.5,
+        "base_temp": 42.52,
         "utm_strength": "19.50 MPa",
         "timestamp": "Sept 16, 2026 - 09:00 AM"
     },
     "Cube 02": {
         "mix": "M20 Grade",
         "curing_days": 7,
-        "base_temp": 31.2,
+        "base_temp": 31.24,
         "utm_strength": "29.10 MPa",
         "timestamp": "Sept 12, 2026 - 11:30 AM"
     },
     "Cube 03": {
         "mix": "M25 High Strength",
         "curing_days": 14,
-        "base_temp": 24.8,
+        "base_temp": 24.81,
         "utm_strength": "Pending Test (Day 28)",
         "timestamp": "Sept 05, 2026 - 08:15 AM"
     },
     "Cube 04": {
         "mix": "M30 Special Mix",
         "curing_days": 28,
-        "base_temp": 22.1,
+        "base_temp": 22.15,
         "utm_strength": "42.30 MPa",
         "timestamp": "Aug 22, 2026 - 07:00 AM"
     },
     "Cube 05": {
         "mix": "M20 Grade",
         "curing_days": 1,
-        "base_temp": 48.9,
+        "base_temp": 48.93,
         "utm_strength": "Too Weak to Test",
         "timestamp": "Sept 18, 2026 - 04:30 PM"
     }
 }
 
 def update_cube_dashboard(selected_cube):
+    """Processes concrete core inputs, calculates maturity, and runs XGBoost."""
+    # Safety verification if data selection structure is empty or initializing
+    if not selected_cube:
+        return [""] * 8
+        
     cube_data = CUBE_DATABASE[selected_cube]
     curing_days = cube_data["curing_days"]
     temp = cube_data["base_temp"]
     
+    # 1. Nurse-Saul Maturity Calculation Loop
     datum_temp = -10.0
     total_hours = curing_days * 24
     calculated_maturity = (temp - datum_temp) * total_hours
     
+    # 2. Safety File Check for the Core Machine Learning Brain
     if not os.path.exists(MODEL_PATH):
         return (
-            cube_data["mix"], cube_data["timestamp"], f"{temp:.1f} °C",
-            f"{calculated_maturity:.0f} °C-hours", "Error", "Missing model file", 
+            cube_data["mix"], cube_data["timestamp"], f"{temp:.2f} °C",
+            f"{calculated_maturity:.0f} °C-hours", "Error", "Missing concrete_model.pkl file", 
             cube_data["utm_strength"], "N/A"
         )
     
+    # 3. XGBoost Compressive Strength Estimation Array Pipeline
     model = joblib.load(MODEL_PATH)
     features = np.array([[temp, curing_days]])
     predicted_strength = float(model.predict(features))
     
+    # 4. Generate Advisory Safety Alert Strings
     if predicted_strength < 20.0:
-        status = "❌ Status: Critical Low Strength. Do NOT remove formwork!"
+        status = "❌ Status: Critical Low Strength. Do NOT remove structural formwork framing panels!"
     elif predicted_strength < 35.0:
-        status = "⚠️ Status: Moderate Curing. Structurally sound for early handling."
+        status = "⚠️ Status: Moderate Curing. Structurally sound for early/minor handling profiles."
     else:
-        status = "✅ Status: Targeted Capacity Met. Safe to strip forms completely."
+        status = "✅ Status: Targeted Capacity Met. Safe to safely strip forms and apply complete loads."
     
+    # 5. Engineering Calibration / Variance Calculations vs Real-world Lab Machine
     real_utm = cube_data["utm_strength"]
     if "MPa" in real_utm:
         real_num = float(real_utm.replace(" MPa", ""))
@@ -92,17 +102,21 @@ def update_cube_dashboard(selected_cube):
         error_val
     )
 
+# =========================================================================
+# GRADIO VISUAL DESIGN MATRIX WITH INTEGRATED MEHRAN UNIVERSITY HEADERS
+# =========================================================================
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
+    # 🏛️ Official Institutional Heading Blocks
     gr.Markdown(
         """
         <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #0A3663; margin-bottom: 5px; font-size: 26px; font-weight: bold;">
+            <h1 style="color: #0A3663; margin-bottom: 5px; font-size: 26px; font-weight: bold; font-family: sans-serif;">
                 MEHRAN UNIVERSITY OF ENGINEERING AND TECHNOLOGY
             </h1>
-            <h2 style="color: #4A5568; margin-top: 0px; margin-bottom: 5px; font-size: 18px; font-weight: 500;">
+            <h2 style="color: #4A5568; margin-top: 0px; margin-bottom: 5px; font-size: 18px; font-weight: 500; font-family: sans-serif;">
                 SZAB CAMPUS KHAIRPUR MIRS
             </h2>
-            <h3 style="color: #718096; margin-top: 0px; margin-bottom: 25px; font-size: 15px; font-weight: bold; border-bottom: 2px solid #E2E8F0; padding-bottom: 15px;">
+            <h3 style="color: #718096; margin-top: 0px; margin-bottom: 25px; font-size: 15px; font-weight: bold; border-bottom: 2px solid #E2E8F0; padding-bottom: 15px; font-family: sans-serif;">
                 DEPARTMENT OF CIVIL ENGINEERING
             </h3>
         </div>
@@ -112,6 +126,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🚧 Multi-Cube Real-Time Concrete Maturity & Strength Tracker")
     gr.Markdown("Select individual structural concrete sample units below to display distinct wireless IoT data profiles.")
 
+    # Primary Dropdown Core - Calibrated to prevent selection index drops
     cube_selector = gr.Dropdown(
         choices=list(CUBE_DATABASE.keys()),
         value="Cube 01",
@@ -137,12 +152,14 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             utm_out = gr.Textbox(label="Universal Testing Machine (UTM) Physical Crushing Result")
             error_out = gr.Textbox(label="Model Prediction Variance / Margin of Error")
 
+    # Linking UI Components (8 output fields matching 8 data positions perfectly)
     cube_selector.change(
         fn=update_cube_dashboard,
         inputs=[cube_selector],
         outputs=[mix_out, time_out, temp_out, maturity_out, strength_out, status_out, utm_out, error_out]
     )
     
+    # Auto-load initial dataset safely on startup
     demo.load(
         fn=update_cube_dashboard,
         inputs=[cube_selector],
